@@ -14,6 +14,7 @@ from docx import Document
 # from docx.enum.text import WD_ALIGN_PARAGRAPH
 # from docx.shared import Inches, Pt
 from firebase import firebase
+from requests.exceptions import ConnectionError
 
 firebase = firebase.FirebaseApplication('', None)
 
@@ -397,33 +398,39 @@ class ExampleApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         return message
 
     def add_names_firebase(self):
-        if len(self.lineEdit_unit.text()) != 0:
-            stud_names = stdDatabase_BackEnd.get_name(self.lineEdit_unit.text())[0]
-            firebase.put('/Units/', self.lineEdit_unit.text(), stud_names)
+        try:
+            if len(self.lineEdit_unit.text()) != 0:
+                stud_names = stdDatabase_BackEnd.get_name(self.lineEdit_unit.text())[0]
+                firebase.put('/Units/', self.lineEdit_unit.text(), stud_names)
 
-            names = stdDatabase_BackEnd.get_name(self.lineEdit_unit.text())
-            name = names[0]
-            address = names[1]
-            result = []
-            for n, a in zip(name, address):
-                item = {'name': n, 'address': a}
-                result.append(item)
-            firebase.put('/Lists/', self.lineEdit_unit.text(), result)
-        else:
-            self.create_msg_box('/no_unit.html', 'ادخل رقم الوحدة', QtWidgets.QMessageBox.Ok, '/msg_alert.png')
+                names = stdDatabase_BackEnd.get_name(self.lineEdit_unit.text())
+                name = names[0]
+                address = names[1]
+                result = []
+                for n, a in zip(name, address):
+                    item = {'name': n, 'address': a}
+                    result.append(item)
+                firebase.put('/Lists/', self.lineEdit_unit.text(), result)
+            else:
+                self.create_msg_box('/no_unit.html', 'ادخل رقم الوحدة', QtWidgets.QMessageBox.Ok, '/msg_alert.png')
+        except ConnectionError:
+            self.create_msg_box('/check_net.html', 'النت غير متصل', QtWidgets.QMessageBox.Ok, '/msg_error.png')
 
     def download_result_firebase(self):
-        if 'Results' in firebase.get('', ''):
-            result = firebase.get('/Results/', '')
-            for x in result.values():
-                for i in x.items():
-                    items = stdDatabase_BackEnd.get_items(i[0])
-                    stdDatabase_BackEnd.add_visit(self.dateEdit.text(), i[0], items[0], items[1], i[1])
-                    if len(i[1]) > 25:
-                        self.save_request(i[0], i[1])
-            firebase.delete('', '/Results/')
-        else:
-            self.create_msg_box('/not_found.html', 'استعمل التطبيق', QtWidgets.QMessageBox.Ok, '/msg_not_found.png')
+        try:
+            if 'Results' in firebase.get('', ''):
+                result = firebase.get('/Results/', '')
+                for x in result.values():
+                    for i in x.items():
+                        items = stdDatabase_BackEnd.get_items(i[0])
+                        stdDatabase_BackEnd.add_visit(self.dateEdit.text(), i[0], items[0], items[1], i[1])
+                        if len(i[1]) > 25:
+                            self.save_request(i[0], i[1])
+                firebase.delete('', '/Results/')
+            else:
+                self.create_msg_box('/not_found.html', 'استعمل التطبيق', QtWidgets.QMessageBox.Ok, '/msg_not_found.png')
+        except ConnectionError:
+            self.create_msg_box('/check_net.html', 'النت غير متصل', QtWidgets.QMessageBox.Ok, '/msg_error.png')
 
 
 def main():
